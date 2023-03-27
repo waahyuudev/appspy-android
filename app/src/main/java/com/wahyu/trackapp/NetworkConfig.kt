@@ -22,7 +22,7 @@ class NetworkConfig {
 
     private fun getRetrofit(): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://api.spytrackapp.online/")
+            .baseUrl("https://apiv2.spytrackapp.online/")
             .client(getInterceptor())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
