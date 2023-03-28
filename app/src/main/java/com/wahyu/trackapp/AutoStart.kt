@@ -8,31 +8,34 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class AutoStart : BroadcastReceiver() {
-    override fun onReceive(p0: Context?, p1: Intent?) {
+    override fun onReceive(context: Context?, intent: Intent?) {
 
-        val PERMISSIONS = arrayOf(
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.READ_CALL_LOG,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.READ_SMS,
-            Manifest.permission.READ_PHONE_STATE
-        )
-        if (hasPermissions(p0, *PERMISSIONS)) {
-            try {
-                val intent = Intent(p0, AppService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    p0?.startForegroundService(intent)
-                } else {
-                    p0?.startService(intent)
+        if (Intent.ACTION_BOOT_COMPLETED == intent?.action) {
+            Log.d("AutoStart", "auto start called")
+            val PERMISSIONS = arrayOf(
+                Manifest.permission.READ_CONTACTS,
+                Manifest.permission.READ_CALL_LOG,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.READ_SMS,
+                Manifest.permission.READ_PHONE_STATE
+            )
+            if (hasPermissions(context, *PERMISSIONS)) {
+                try {
+                    val i = Intent(context, AppService::class.java)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context?.startForegroundService(i)
+                    } else {
+                        context?.startService(i)
+                    }
+                    Log.i("Autostart", "started")
+                } catch (e: Exception) {
+                    e.printStackTrace();
                 }
-                Log.i("Autostart", "started")
-            } catch (e: Exception) {
-                e.printStackTrace();
             }
         }
-
     }
 
     private fun hasPermissions(context: Context?, vararg permissions: String): Boolean =

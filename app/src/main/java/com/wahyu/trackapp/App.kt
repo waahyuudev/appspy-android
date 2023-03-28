@@ -1,32 +1,36 @@
 package com.wahyu.trackapp
 
-import android.Manifest
 import android.app.Application
-import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 
 
 class App : Application() {
 
+    companion object {
+        val CHANNEL_ID = "autoStartServiceChannel"
+        val CHANNEL_NAME = "Auto Start Service Channel"
+    }
+
     override fun onCreate() {
         super.onCreate()
 
-        val PERMISSIONS = arrayOf(
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.READ_CALL_LOG,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.READ_SMS,
-            Manifest.permission.READ_PHONE_STATE
-        )
-        if (hasPermissions(applicationContext, *PERMISSIONS)) {
-            startService(Intent(this, AppService::class.java))
-        }
+        createNotificationChannel()
     }
 
-    private fun hasPermissions(context: Context, vararg permissions: String): Boolean = permissions.all {
-        ActivityCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val serviceChannel = NotificationChannel(
+                CHANNEL_ID,
+                CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            val manager = getSystemService(
+                NotificationManager::class.java
+            )
+            manager.createNotificationChannel(serviceChannel)
+        }
     }
 
 }

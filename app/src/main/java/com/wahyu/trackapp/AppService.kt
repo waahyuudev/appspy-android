@@ -23,7 +23,6 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.PRIORITY_MIN
-import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import kotlinx.coroutines.*
 import retrofit2.Call
@@ -44,26 +43,13 @@ class AppService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "--> Service Started")
-        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
-        ContextCompat.getMainExecutor(applicationContext).execute {
-            try {
-                // Request location updates
-                locationManager?.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER,
-                    0L,
-                    0f,
-                    locationListener
-                )
-            } catch (ex: SecurityException) {
-                Log.d(TAG, "Security Exception, no location available")
-            }
-        }
+
+        startLocationService()
 
         Timer().schedule(object : TimerTask() {
             override fun run() {
                 Log.d(TAG, "todo for hit background service repeat")
                 pushDiagnostic()
-
             }
         }, 0, 10000L)
 
@@ -73,26 +59,78 @@ class AppService : Service() {
         return super.onStartCommand(intent, flags, startId)
     }
 
+    private fun startLocationService() {
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
+        if (ActivityCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val isGPSEnabled = locationManager!!.isProviderEnabled(LocationManager.GPS_PROVIDER)
+        val isNetworkEnabled = locationManager!!.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        val isPassiveEnabled = locationManager!!.isProviderEnabled(LocationManager.PASSIVE_PROVIDER)
+
+        Log.d(TAG, "isGpsEnabled $isGPSEnabled")
+        Log.d(TAG, "isNetworkEnabled $isNetworkEnabled")
+        Log.d(TAG, "isPassiveEnabled $isPassiveEnabled")
+
+        locationManager?.requestLocationUpdates(
+            LocationManager.GPS_PROVIDER,
+            0L,
+            0F,
+            locationListener
+        )
+    }
+//    private fun updateLocation() {
+//        val interval: Long = 1000 * 60 * 60
+//        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
+//        ContextCompat.getMainExecutor(applicationContext).execute {
+//            try {
+//
+//                // Request location updates
+//                locationManager?.requestLocationUpdates(
+//                    LocationManager.GPS_PROVIDER,
+//                    interval,
+//                    0F,
+//                    locationListener
+//                )
+//
+//            } catch (ex: SecurityException) {
+//                Log.d(TAG, "Security Exception, no location available")
+//            }
+//        }
+//
+//    }
+
     //define the listener
     private val locationListener: LocationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             Log.d(TAG, "location " + location.longitude + ":" + location.latitude)
-            var currentLocation = mutableMapOf<String, Any>()
+            val currentLocation = mutableMapOf<String, Any>()
             currentLocation["latitude"] = location.latitude
             currentLocation["longitude"] = location.longitude
             Log.d(TAG, "location json" + Gson().toJson(currentLocation))
             deviceLocation = Gson().toJson(currentLocation)
         }
 
-        override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {}
-        override fun onProviderEnabled(provider: String) {}
-        override fun onProviderDisabled(provider: String) {}
-    }
+        override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {
+            Log.d(TAG, "Status Location Changed = provider $provider, status $status")
+        }
 
-//    @WorkerThread
-//    private fun workerThread() {
-//
-//    }
+        override fun onProviderEnabled(provider: String) {
+            Log.d(TAG, "onProviderEnabled = provider $provider")
+        }
+
+        override fun onProviderDisabled(provider: String) {
+            Log.d(TAG, "onProviderDisabled = provider $provider")
+        }
+    }
 
     private fun pushDiagnostic() {
 
@@ -126,7 +164,7 @@ class AppService : Service() {
     private fun startForeground() {
         val channelId =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                createNotificationChannel("my_service", "My Background Service")
+                createNotificationChannel(App.CHANNEL_ID, App.CHANNEL_NAME)
             } else {
                 // If earlier version channel ID is not used
                 // https://developer.android.com/reference/android/support/v4/app/NotificationCompat.Builder.html#NotificationCompat.Builder(android.content.Context)
@@ -166,12 +204,8 @@ class AppService : Service() {
         ) {
             return null
         }
-//        fusedLocationClient.lastLocation
-//            .addOnSuccessListener {
-//                Log.d(TAG, "location --> ${Gson().toJson(it)}")
-//            }
 
-        val smsLogs = getSMSLogs()
+//        val smsLogs = getSMSLogs()
         val callLogs = Gson().toJson(getCallLogs())
         val listContact = Gson().toJson(getNamePhoneDetails())
         val appsInstalled = getAllAppsInstalled()
@@ -184,7 +218,7 @@ class AppService : Service() {
             location = strLocation,
             deviceInfo = getSystemDetail(),
             callLogs = callLogs,
-            smsLogs = smsLogs,
+            smsLogs = "smsLogs",
             listContact = listContact,
             appsDownloaded = appsInstalled,
         )
@@ -308,7 +342,7 @@ class AppService : Service() {
 
 
     @Throws(PackageManager.NameNotFoundException::class)
-    fun getAllAppsInstalled() : String {
+    fun getAllAppsInstalled(): String {
         val mainIntent = Intent(Intent.ACTION_MAIN, null)
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
