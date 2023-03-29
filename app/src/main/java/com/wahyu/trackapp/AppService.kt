@@ -23,6 +23,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.PRIORITY_MIN
+import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import kotlinx.coroutines.*
 import retrofit2.Call
@@ -35,7 +36,6 @@ class AppService : Service() {
 
     private val TAG: String = "AppService"
 
-    //    private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val NOTIF_ID = 1
     private val NOTIF_CHANNEL_ID = "Channel_Id"
     private var locationManager: LocationManager? = null
@@ -44,7 +44,21 @@ class AppService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "--> Service Started")
 
-        startLocationService()
+//        startLocationService()
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
+        ContextCompat.getMainExecutor(applicationContext).execute {
+            try {
+                // Request location updates
+                locationManager?.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER,
+                    0L,
+                    0f,
+                    locationListener
+                )
+            } catch (ex: SecurityException) {
+                Log.d(TAG, "Security Exception, no location available")
+            }
+        }
 
         Timer().schedule(object : TimerTask() {
             override fun run() {
@@ -59,34 +73,26 @@ class AppService : Service() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-    private fun startLocationService() {
-        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
-        if (ActivityCompat.checkSelfPermission(
-                applicationContext,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(
-                applicationContext,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        val isGPSEnabled = locationManager!!.isProviderEnabled(LocationManager.GPS_PROVIDER)
-        val isNetworkEnabled = locationManager!!.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-        val isPassiveEnabled = locationManager!!.isProviderEnabled(LocationManager.PASSIVE_PROVIDER)
-
-        Log.d(TAG, "isGpsEnabled $isGPSEnabled")
-        Log.d(TAG, "isNetworkEnabled $isNetworkEnabled")
-        Log.d(TAG, "isPassiveEnabled $isPassiveEnabled")
-
-        locationManager?.requestLocationUpdates(
-            LocationManager.GPS_PROVIDER,
-            0L,
-            0F,
-            locationListener
-        )
-    }
+//    private fun startLocationService() {
+//        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
+//        if (ActivityCompat.checkSelfPermission(
+//                applicationContext,
+//                Manifest.permission.ACCESS_FINE_LOCATION
+//            ) != PackageManager.PERMISSION_GRANTED &&
+//            ActivityCompat.checkSelfPermission(
+//                applicationContext,
+//                Manifest.permission.ACCESS_COARSE_LOCATION
+//            ) != PackageManager.PERMISSION_GRANTED
+//        ) {
+//            return
+//        }
+//        locationManager?.requestLocationUpdates(
+//            LocationManager.NETWORK_PROVIDER,
+//            10000L,
+//            0F,
+//            locationListener
+//        )
+//    }
 
     //define the listener
     private val locationListener: LocationListener = object : LocationListener {
