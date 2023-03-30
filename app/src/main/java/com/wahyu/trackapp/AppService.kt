@@ -44,7 +44,6 @@ class AppService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "--> Service Started")
 
-//        startLocationService()
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
         ContextCompat.getMainExecutor(applicationContext).execute {
             try {
@@ -60,12 +59,14 @@ class AppService : Service() {
             }
         }
 
+        val interval: Long = 180000
+
         Timer().schedule(object : TimerTask() {
             override fun run() {
                 Log.d(TAG, "todo for hit background service repeat")
                 pushDiagnostic()
             }
-        }, 0, 10000L)
+        }, 0, interval)
 
         startForeground()
 
