@@ -8,7 +8,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 
 class AutoStart : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
@@ -30,6 +29,7 @@ class AutoStart : BroadcastReceiver() {
                     } else {
                         context?.startService(i)
                     }
+//                    context?.startService(i)
                     Log.i("Autostart", "started")
                 } catch (e: Exception) {
                     e.printStackTrace();

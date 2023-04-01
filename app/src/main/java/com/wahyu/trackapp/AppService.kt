@@ -15,6 +15,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.SystemClock
 import android.provider.CallLog
 import android.provider.ContactsContract
 import android.provider.Settings
@@ -40,6 +41,43 @@ class AppService : Service() {
     private val NOTIF_CHANNEL_ID = "Channel_Id"
     private var locationManager: LocationManager? = null
     private var deviceLocation: String? = null
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        Log.d(TAG, "unbind")
+        return super.onUnbind(intent)
+    }
+
+    override fun onTrimMemory(level: Int) {
+        Log.d(TAG, "onTrimMemory")
+        super.onTrimMemory(level)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "onTaskRemoved")
+
+//        Handler().postDelayed({
+//            val broadcastIntent = Intent()
+//            broadcastIntent.action = "restartservice"
+//            broadcastIntent.setClass(this, RestartReceiver::class.java)
+//            this.sendBroadcast(broadcastIntent)
+//        }, 1000)
+
+        val restartServiceIntent = Intent(applicationContext, this.javaClass)
+        restartServiceIntent.setPackage(packageName)
+
+        val restartServicePendingIntent = PendingIntent.getService(
+            applicationContext,
+            1,
+            restartServiceIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val alarmService = applicationContext.getSystemService(ALARM_SERVICE) as AlarmManager
+        alarmService[AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1000] =
+            restartServicePendingIntent
+        super.onTaskRemoved(rootIntent)
+    }
+
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "--> Service Started")
