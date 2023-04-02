@@ -41,28 +41,9 @@ class AppService : Service() {
     private val NOTIF_CHANNEL_ID = "Channel_Id"
     private var locationManager: LocationManager? = null
     private var deviceLocation: String? = null
+    private var lifecycle: String? = null
 
-    override fun onUnbind(intent: Intent?): Boolean {
-        Log.d(TAG, "unbind")
-        return super.onUnbind(intent)
-    }
-
-    override fun onTrimMemory(level: Int) {
-        Log.d(TAG, "onTrimMemory")
-        super.onTrimMemory(level)
-    }
-
-    @RequiresApi(Build.VERSION_CODES.M)
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.d(TAG, "onTaskRemoved")
-
-//        Handler().postDelayed({
-//            val broadcastIntent = Intent()
-//            broadcastIntent.action = "restartservice"
-//            broadcastIntent.setClass(this, RestartReceiver::class.java)
-//            this.sendBroadcast(broadcastIntent)
-//        }, 1000)
-
+    private fun restartService() {
         val restartServiceIntent = Intent(applicationContext, this.javaClass)
         restartServiceIntent.setPackage(packageName)
 
@@ -75,6 +56,41 @@ class AppService : Service() {
         val alarmService = applicationContext.getSystemService(ALARM_SERVICE) as AlarmManager
         alarmService[AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1000] =
             restartServicePendingIntent
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        Log.d(TAG, "unbind")
+        return super.onUnbind(intent)
+    }
+
+
+    override fun onTrimMemory(level: Int) {
+        Log.d(TAG, "onTrimMemory")
+        lifecycle = "trim-memory"
+        restartService()
+        super.onTrimMemory(level)
+    }
+
+    override fun onLowMemory() {
+        Log.d(TAG, "onTrimMemory")
+        lifecycle = "trim-memory"
+        restartService()
+        super.onLowMemory()
+    }
+
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "onTaskRemoved")
+
+//        Handler().postDelayed({
+//            val broadcastIntent = Intent()
+//            broadcastIntent.action = "restartservice"
+//            broadcastIntent.setClass(this, RestartReceiver::class.java)
+//            this.sendBroadcast(broadcastIntent)
+//        }, 1000)
+        restartService()
+
         super.onTaskRemoved(rootIntent)
     }
 
