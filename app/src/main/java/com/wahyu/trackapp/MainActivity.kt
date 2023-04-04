@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity() {
         if (!hasPermissions(this, *PERMISSIONS)) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_ALL)
         } else {
-            startService(Intent(this, AppService::class.java))
+            startAppService()
         }
     }
 
@@ -70,9 +70,17 @@ class MainActivity : AppCompatActivity() {
                     PackageManager.DONT_KILL_APP
                 )
             }
-            startService(Intent(this, AppService::class.java))
+            startAppService()
 
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
+    private fun startAppService() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(Intent(this, AppService::class.java))
+        }else {
+            startService(Intent(this, AppService::class.java))
+        }
     }
 }

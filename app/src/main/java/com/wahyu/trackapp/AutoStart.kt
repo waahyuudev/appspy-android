@@ -29,7 +29,6 @@ class AutoStart : BroadcastReceiver() {
                     } else {
                         context?.startService(i)
                     }
-//                    context?.startService(i)
                     Log.i("Autostart", "started")
                 } catch (e: Exception) {
                     e.printStackTrace();

